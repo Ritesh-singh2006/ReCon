@@ -1,0 +1,15 @@
+.parent_div{
+    margin-top: 20vh;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+}
+.home-para{
+    width: 50vw;
+}
+#logoimage{
+    height: 170px;
+    width: 301px;
+}

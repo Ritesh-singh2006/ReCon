@@ -1,0 +1,35 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+.readersection{
+    display: flex;
+    flex-direction: column;
+}
+.navigationbar{
+    display: flex;
+    justify-content: space-between;
+    height: 5vh;
+    padding: 10px;
+    background-color: rgb(107, 106, 88);
+}
+.cicomponents{
+    display: flex;
+    flex-direction: column;
+}
+.mainpdf{
+    width: 55vw;
+    height: 95vh;
+    overflow-y: scroll;
+}
+.highlight{
+    height: 47.5vh;
+    width: 45vw;
+}
+.summary{
+    height: 47.5vh;
+    width: 45vw;
+}
+.parentdiv{
+    display: flex;
+}
