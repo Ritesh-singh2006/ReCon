@@ -4,7 +4,8 @@ import { Document, Page, pdfjs } from "react-pdf";
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
-import './Reader.css'
+import './Reader.css';
+import highlighticon from "../assets/highlight.svg";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
 
@@ -17,6 +18,7 @@ function Reader() {
     const [totalpages, settotalpages] = useState(1);
     const [doc, setdoc] = useState(null);
     const [SelectedText, setSelectedText] = useState(null);
+    const [position, setposition] = useState(null);
 
     useEffect(() => {
         fetch(`http://localhost:3000/api/uploads/${documentId}`)
@@ -32,8 +34,13 @@ function Reader() {
         const handleMouseUp = () => {
             const selection = window.getSelection();
             const text = selection.toString();
-            if (text) {
-                setSelectedText(text);
+            if (text && text.length > 0) {
+                setSelectedText(text)
+                const rect = selection.getRangeAt(0).getBoundingClientRect()
+                setposition({ top: rect.top, left: rect.left })
+            } else {
+                setSelectedText(null)
+                setposition(null)  // hide toolbar when no selection
             }
         }
         const el = pdfRef.current;
@@ -104,6 +111,16 @@ function Reader() {
                     </div>
                 </div>
             </section>
+            {position && (
+                <button style={{
+                    position: "absolute",
+                    top: position.top,
+                    left: position.left,
+                    borderRadius: "6px"
+                }}>
+                    <img src={highlighticon} alt="" />
+                </button>
+            )}
         </>
     )
 }
