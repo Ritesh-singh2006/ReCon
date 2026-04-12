@@ -67,7 +67,7 @@ app.post('/api/highlight', async (req, res) => {
       currentPage,
     });
     await highlight.save();
-    console.log("highlight saved successfully in DB");
+    res.json({message:"highlight saved successfully in DB"})
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -5,6 +5,7 @@ import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import './Reader.css';
+import toast from "react-hot-toast";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
 
@@ -17,9 +18,7 @@ function Reader() {
     const [totalpages, settotalpages] = useState(1);
     const [doc, setdoc] = useState(null);
     const [selectedText, setSelectedText] = useState(null);
-    const [toolbarPosition, setToolbarPosition] = useState(null);
 
-    // fetch document info from backend
     useEffect(() => {
         fetch(`http://localhost:3000/api/uploads/${documentId}`)
             .then(res => res.json())
@@ -32,25 +31,10 @@ function Reader() {
         const handleMouseUp = () => {
             const selection = window.getSelection();
             const text = selection.toString().trim();
-
-            if (text && text.length > 0) {
-                // text is selected — store it and calculate toolbar position
+            if (text) {
                 setSelectedText(text);
-                const rect = selection.getRangeAt(0).getBoundingClientRect();
-                setToolbarPosition({
-                    // position toolbar just above the selection
-                    // rect.top gives distance from top of viewport
-                    // we subtract 40px so toolbar appears above the text
-                    top: rect.top + window.scrollY - 40,
-                    left: rect.left + window.scrollX
-                });
-            } else {
-                // nothing selected — hide toolbar
-                setSelectedText(null);
-                setToolbarPosition(null);
             }
         }
-
         const el = pdfRef.current;
         if (el) {
             el.addEventListener("mouseup", handleMouseUp);
@@ -73,14 +57,12 @@ function Reader() {
                 currentPage: currentpage,
             })
         })
-        .then(res => res.json())
-        .then(data => {
-            console.log("highlight saved:", data)
-            // hide toolbar after saving
-            setSelectedText(null);
-            setToolbarPosition(null);
-        })
-        .catch(err => console.log(err));
+            .then(res => res.json())
+            .then(data => {
+                toast.success(data.message);
+                setSelectedText(null);
+            })
+            .catch(err => console.log(err));
     }
 
     if (!doc) return <p>Loading...</p>;
@@ -97,6 +79,7 @@ function Reader() {
             <section className="readersection">
                 <div className="navigationbar">
                     <span>{doc.name}</span>
+                    <button onClick={handleHighlight}>Highlight</button>
                     <div>
                         <button onClick={prevhandler}>prev</button>
                         <span>page {currentpage} of {totalpages}</span>
@@ -122,33 +105,6 @@ function Reader() {
                     </div>
                 </div>
             </section>
-
-            {/* toolbar only appears when text is selected */}
-            {toolbarPosition && (
-                <button
-                    onMouseDown={(e) => {
-                        // prevent mousedown from clearing the selection
-                        // before handleHighlight can read it
-                        e.preventDefault();
-                    }}
-                    onClick={handleHighlight}
-                    style={{
-                        position: "fixed",
-                        top: toolbarPosition.top,
-                        left: toolbarPosition.left,
-                        background: "#a29bfe",
-                        color: "white",
-                        border: "none",
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        zIndex: 1000,
-                        fontSize: "13px"
-                    }}
-                >
-                    Highlight
-                </button>
-            )}
         </>
     )
 }
