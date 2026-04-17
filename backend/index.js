@@ -4,6 +4,7 @@ import multer from "multer";
 import mongoose from "mongoose";
 import { DocumentModel } from "./models/Document.js";
 import { highlightModel } from "./models/Highlight.js";
+import { getGroqChatCompletion } from "./services/summaryservice.js";
 
 const app = express()
 const port = 3000
@@ -67,7 +68,12 @@ app.post('/api/highlight', async (req, res) => {
       currentPage,
     });
     await highlight.save();
-    res.json({message:"highlight saved successfully in DB"})
+    const chatCompletion = await getGroqChatCompletion(highlight.selectedText)
+    const aiResponse = chatCompletion.choices[0]?.message?.content || "";
+    res.json({
+      message:"highlight saved successfully in DB",
+      summaryResponse : aiResponse
+    })
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

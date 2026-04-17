@@ -18,6 +18,7 @@ function Reader() {
     const [totalpages, settotalpages] = useState(1);
     const [doc, setdoc] = useState(null);
     const [selectedText, setSelectedText] = useState(null);
+    const [aiResponse, setaiResponse] = useState([]);
 
     useEffect(() => {
         fetch(`http://localhost:3000/api/uploads/${documentId}`)
@@ -60,6 +61,10 @@ function Reader() {
             .then(res => res.json())
             .then(data => {
                 toast.success(data.message);
+                setaiResponse(prev => [
+                    ...prev,
+                    data.summaryResponse,
+                ]);
                 setSelectedText(null);
             })
             .catch(err => console.log(err));
@@ -101,7 +106,12 @@ function Reader() {
                     </div>
                     <div className="aicomponents">
                         <div className="highlight">YOU READ THIS LAST TIME</div>
-                        <div className="summary">THE SUMMARY IS</div>
+                        <div className="summary">
+                            <h1>SUMMARY IS</h1>
+                            {aiResponse.map((item, index) => (
+                                <p key={index}>{item}</p>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
