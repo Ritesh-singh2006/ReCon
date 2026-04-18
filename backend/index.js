@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { DocumentModel } from "./models/Document.js";
 import { highlightModel } from "./models/Highlight.js";
 import { getGroqChatCompletion } from "./services/summaryservice.js";
+import {convertToVector} from "./services/embeddingService.js"
 
 const app = express()
 const port = 3000
@@ -74,6 +75,9 @@ app.post('/api/highlight', async (req, res) => {
       message:"highlight saved successfully in DB",
       summaryResponse : aiResponse
     })
+    const embedding = await convertToVector(highlight.selectedText);
+    console.log(embedding);
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

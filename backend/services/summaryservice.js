@@ -6,12 +6,6 @@
 import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-// export async function main() {
-//   const chatCompletion = await getGroqChatCompletion();
-//   console.log(chatCompletion.choices[0]?.message?.content || "");
-// }
-
 export async function getGroqChatCompletion(highlightedText) {
   return groq.chat.completions.create({
     messages: [
@@ -38,4 +32,3 @@ export async function getGroqChatCompletion(highlightedText) {
     model: "openai/gpt-oss-20b",
   });
 }
-// main();

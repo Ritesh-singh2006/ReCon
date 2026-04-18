@@ -60,6 +60,7 @@ function Reader() {
         })
             .then(res => res.json())
             .then(data => {
+                console.log(data);
                 toast.success(data.message);
                 setaiResponse(prev => [
                     ...prev,
