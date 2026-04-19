@@ -79,8 +79,11 @@ app.post('/api/highlight', async (req, res) => {
       pageNumber: currentPage
     }
     await storeEmbedding(highlight.id, embedding, metadata)
-    const output = await querySimilar(embedding);
-    
+    const vectorSearchResult = await querySimilar(embedding);
+    console.log(vectorSearchResult);
+    const output = vectorSearchResult.matches.filter(
+      item => item.score > 0.8 && item.score < 0.99
+    );
     res.json({
       message: "highlight saved successfully in DB",
       summaryResponse: aiResponse,
