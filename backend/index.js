@@ -5,7 +5,8 @@ import mongoose from "mongoose";
 import { DocumentModel } from "./models/Document.js";
 import { highlightModel } from "./models/Highlight.js";
 import { getGroqChatCompletion } from "./services/summaryservice.js";
-import {convertToVector} from "./services/embeddingService.js"
+import { convertToVector } from "./services/embeddingService.js"
+import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
 
 const app = express()
 const port = 3000
@@ -71,13 +72,20 @@ app.post('/api/highlight', async (req, res) => {
     await highlight.save();
     const chatCompletion = await getGroqChatCompletion(highlight.selectedText)
     const aiResponse = chatCompletion.choices[0]?.message?.content || "";
-    res.json({
-      message:"highlight saved successfully in DB",
-      summaryResponse : aiResponse
-    })
     const embedding = await convertToVector(highlight.selectedText);
-    console.log(embedding);
-
+    const metadata = {
+      text: highlight.selectedText,
+      documentId: documentId,
+      pageNumber: currentPage
+    }
+    await storeEmbedding(highlight.id, embedding, metadata)
+    const output = await querySimilar(embedding);
+    
+    res.json({
+      message: "highlight saved successfully in DB",
+      summaryResponse: aiResponse,
+      relatedHighlights: output
+    })
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

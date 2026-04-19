@@ -19,6 +19,7 @@ function Reader() {
     const [doc, setdoc] = useState(null);
     const [selectedText, setSelectedText] = useState(null);
     const [aiResponse, setaiResponse] = useState([]);
+    const [earlierRead,setearlierRead] = useState(null);
 
     useEffect(() => {
         fetch(`http://localhost:3000/api/uploads/${documentId}`)
@@ -66,6 +67,7 @@ function Reader() {
                     ...prev,
                     data.summaryResponse,
                 ]);
+                setearlierRead(data.relatedHighlights);
                 setSelectedText(null);
             })
             .catch(err => console.log(err));
@@ -106,7 +108,9 @@ function Reader() {
                         </Document>
                     </div>
                     <div className="aicomponents">
-                        <div className="highlight">YOU READ THIS LAST TIME</div>
+                        <div className="highlight">
+                            <h1>YOU READ THIS LAST TIME</h1>
+                        </div>
                         <div className="summary">
                             <h1>SUMMARY IS</h1>
                             {aiResponse.map((item, index) => (
