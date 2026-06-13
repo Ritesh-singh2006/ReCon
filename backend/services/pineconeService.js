@@ -1,6 +1,6 @@
 import { Pinecone } from '@pinecone-database/pinecone'
 const pc = new Pinecone({ apiKey: "pcsk_5eFGSo_JPvgJ5wTCxko5thHZeZ1RGNLLvAJThxtKLcWt8GRtE6dG2v8rCKPPravaCDt2zT" })
-const namespace = pc.index("recon", "").namespace("__default__");
+const namespace = pc.index("recon", "https://recon-v7wjxf6.svc.aped-4627-b74a.pinecone.io").namespace("__default__");
 
 // const generateDummyVector = () => Array.from({ length: 384 }, () => Math.random());
 export async function storeEmbedding(highlightId, vector, metadata) {
@@ -15,12 +15,29 @@ export async function storeEmbedding(highlightId, vector, metadata) {
   });
 }
 
-export async function querySimilar(vector) {
-  const queryResponse = await namespace.query({
-    vector: vector,
-    topK: 3,
-    includeValues: false,
-    includeMetadata: true,
-  });
-  return queryResponse;
+// export async function querySimilar(vector) {
+//   const queryResponse = await namespace.query({
+//     vector: vector,
+//     topK: 3,
+//     includeValues: false,
+//     includeMetadata: true,
+//   });
+//   return queryResponse;
+// }
+
+export const querySimilar = async (vector, currentHighlightId) => {
+
+  const result = await namespace.query({
+    vector,
+    topK: 10,              // fetch 4 so after removing self we still have 3
+    includeMetadata: true
+  })
+
+  // filter out self-match and weak results
+  const filtered = result.matches
+    .filter(item =>
+      item.id !== currentHighlightId // not the same highlight 
+    )
+
+  return filtered
 }

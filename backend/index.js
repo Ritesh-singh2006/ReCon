@@ -1,9 +1,13 @@
+import 'dotenv/config'
 import express from "express";
 import cors from "cors";
 import multer from "multer";
 import mongoose from "mongoose";
+import session from "express-session";
+import passport from "./auth/passport.js";
 import { DocumentModel } from "./models/Document.js";
 import { highlightModel } from "./models/Highlight.js";
+import { UserModel } from './models/User.js';
 import { getGroqChatCompletion } from "./services/summaryservice.js";
 import { convertToVector } from "./services/embeddingService.js"
 import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
@@ -11,9 +15,33 @@ import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
 const app = express()
 const port = 3000
 
-app.use(cors())
-app.use('/uploads', express.static('uploads'))
+// credentials: true tells browser to include cookies in cross-origin requests
+// without this, session cookie won't be sent from localhost:5173 to localhost:3000
+app.use(cors({
+  origin: "http://localhost:5173", // only allow your React app
+  credentials: true               // allow cookies to be sent
+}))
+
 app.use(express.json())
+app.use('/uploads', express.static('uploads'))
+
+// 4. Session middleware — must come BEFORE passport
+// This creates and manages sessions for all requests
+app.use(session({
+  secret: process.env.SESSION_SECRET, // from your .env file — signs the cookie
+  resave: false,                      // don't save session if nothing changed
+  saveUninitialized: false,           // don't create session until something stored
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000    // session lasts 24 hours (in milliseconds)
+  }
+}))
+
+// 5. Passport initialize — sets passport up on every request
+app.use(passport.initialize())
+
+// 6. Passport session — reads session cookie, calls deserializeUser, sets req.user
+// must come AFTER express-session
+app.use(passport.session())
 
 //connecting database
 mongoose.connect("mongodb://localhost:27017/ReCon_DB")
@@ -23,6 +51,62 @@ mongoose.connect("mongodb://localhost:27017/ReCon_DB")
   .catch((err) => {
     console.log("failed to connect DB :" + err)
   });
+
+// ─── AUTH MIDDLEWARE ─────────────────────────────────────────────────────────
+
+
+// Reusable function to protect routes
+// Add this to any route that requires login
+function isLoggedIn(req, res, next) {
+  if (req.user) {
+    next() // user is logged in — continue to route handler
+  } else {
+    res.status(401).json({ message: "please login first" })
+  }
+}
+
+// ─── AUTH ROUTES ─────────────────────────────────────────────────────────────
+
+// Starts Google OAuth flow
+// When frontend hits this URL, passport redirects to Google login page
+// scope tells Google what info we want — profile (name) and email
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+)
+
+// Google redirects here after user logs in
+// Passport handles the code exchange, runs verify callback, serializes user
+app.get('/auth/google/callback',
+  passport.authenticate('google', {
+    failureRedirect: 'http://localhost:5173' // login failed — back to home
+  }),
+  (req, res) => {
+    // login succeeded — redirect to React app
+    res.redirect('http://localhost:5173')
+  }
+)
+
+// Route for frontend to check if user is logged in
+// Frontend calls this on load to know whether to show login button or home screen
+app.get('/auth/me', (req, res) => {
+  if (req.user) {
+    res.json({
+      loggedIn: true,
+      name: req.user.name,
+      email: req.user.email,
+      id: req.user._id
+    })
+  } else {
+    res.json({ loggedIn: false })
+  }
+})
+
+// Logout route
+app.get('/auth/logout', (req, res) => {
+  req.logout(() => {
+    res.json({ message: "logged out successfully" })
+  })
+})
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -42,12 +126,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage })
 
 //saving file at backend server using multer and logging it to DB
-app.post('/api/upload', upload.single('file'), async (req, res) => { //this name i.e 'file' inside .single() should match with key of dataframe in frontend
+app.post('/api/upload', isLoggedIn, upload.single('file'), async (req, res) => { //this name i.e 'file' inside .single() should match with key of dataframe in frontend
   try {
     console.log(req.file)
 
     //saving in DB
-    const document = new DocumentModel({ name: req.file.originalname, path: req.file.path })
+    const document = new DocumentModel({ name: req.file.originalname, path: req.file.path, userId: req.user._id })
     await document.save()
     res.json({
       message: "file uploaded successfully",
@@ -61,33 +145,42 @@ app.post('/api/upload', upload.single('file'), async (req, res) => { //this name
   }
 })
 
-app.post('/api/highlight', async (req, res) => {
+app.get('/api/documents', isLoggedIn, async (req, res) => {
+  try {
+    const documents = await DocumentModel.find({ userId: req.user._id })
+      .sort({ uploadedAt: -1 }) // newest first
+    res.json(documents)
+  } catch (err) {
+    res.status(500).json({ message: "error fetching documents" })
+  }
+})
+
+app.post('/api/highlight', isLoggedIn, async (req, res) => {
   try {
     const { selectedText, documentId, currentPage } = req.body;
     const highlight = new highlightModel({
       selectedText,
       documentId,
       currentPage,
+      userId: req.user._id
     });
     await highlight.save();
-    const chatCompletion = await getGroqChatCompletion(highlight.selectedText)
-    const aiResponse = chatCompletion.choices[0]?.message?.content || "";
+    // const chatCompletion = await getGroqChatCompletion(highlight.selectedText)
+    // const aiResponse = chatCompletion.choices[0]?.message?.content || "";
     const embedding = await convertToVector(highlight.selectedText);
     const metadata = {
       text: highlight.selectedText,
       documentId: documentId,
       pageNumber: currentPage
     }
-    await storeEmbedding(highlight.id, embedding, metadata)
-    const vectorSearchResult = await querySimilar(embedding);
-    console.log(vectorSearchResult);
-    const output = vectorSearchResult.matches.filter(
-      item => item.score > 0.8 && item.score < 0.99
-    );
+    await storeEmbedding(highlight.id, embedding, metadata)    
+    const vectorSearchResult = await querySimilar(embedding, highlight._id.toString());
+    const aiResponse = await getGroqChatCompletion(vectorSearchResult, highlight.selectedText);
+
+    console.log(aiResponse.choices[0].message.content);
     res.json({
       message: "highlight saved successfully in DB",
-      summaryResponse: aiResponse,
-      relatedHighlights: output
+      relatedHighlights: aiResponse
     })
   } catch (err) {
     res.status(500).json({ error: err.message });

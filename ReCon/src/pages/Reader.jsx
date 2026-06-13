@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
@@ -13,6 +13,7 @@ function Reader() {
 
     const pdfRef = useRef(null);
     const { documentId } = useParams();
+    const navigate = useNavigate();
 
     const [currentpage, setcurrentpage] = useState(1);
     const [totalpages, settotalpages] = useState(1);
@@ -21,14 +22,31 @@ function Reader() {
     const [aiResponse, setaiResponse] = useState([]);
     const [earlierRead, setearlierRead] = useState([]);
 
+    // Check auth on load — redirect to home if not logged in
     useEffect(() => {
-        fetch(`http://localhost:3000/api/uploads/${documentId}`)
+        fetch("http://localhost:3000/auth/me", {
+            credentials: 'include'
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.loggedIn) {
+                    navigate('/') // not logged in — back to home
+                }
+            })
+            .catch(err => console.log(err))
+    }, [])
+
+    // Fetch document info
+    useEffect(() => {
+        fetch(`http://localhost:3000/api/uploads/${documentId}`, {
+            credentials: 'include' // send session cookie
+        })
             .then(res => res.json())
             .then(data => setdoc(data))
             .catch(err => console.log("err"))
     }, [documentId]);
 
-    // detect text selection on PDF
+    // Detect text selection on PDF
     useEffect(() => {
         const handleMouseUp = () => {
             const selection = window.getSelection();
@@ -46,13 +64,14 @@ function Reader() {
         };
     }, [doc]);
 
-    // this runs ONLY when user clicks the highlight button
+    // Runs only when user clicks Highlight button
     const handleHighlight = () => {
         if (!selectedText) return;
 
         fetch('http://localhost:3000/api/highlight', {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // send session cookie
             body: JSON.stringify({
                 selectedText,
                 documentId,
@@ -61,23 +80,17 @@ function Reader() {
         })
             .then(res => res.json())
             .then(data => {
-                console.log(data);
                 toast.success(data.message);
-                setaiResponse(prev => [
-                    ...prev,
-                    data.summaryResponse,
-                ]);
-                setearlierRead(prev => [
-                    ...prev,
-                    ...(data.relatedHighlights ?? [])
-                ]);
-                console.log(earlierRead[0]?.metadata);
+                const content = data.relatedHighlights.choices[0].message.content;
+                const highlights = JSON.parse(content);
+                // setaiResponse(prev => [...prev, data.summaryResponse]);
+                setearlierRead(prev => [...prev, ...highlights]);
                 setSelectedText(null);
             })
             .catch(err => console.log(err));
     }
 
-    if (!doc) return <p>Loading...</p>;
+    if (!doc) return <div className="loading-container"><div className="loader"></div><p>Loading document...</p></div>;
 
     const handleLoadSuccess = ({ numPages }) => {
         settotalpages(numPages);
@@ -87,19 +100,29 @@ function Reader() {
     const nexthandler = () => setcurrentpage(p => Math.min(p + 1, totalpages));
 
     return (
-        <>
-            <section className="readersection">
-                <div className="navigationbar">
-                    <span>{doc.name}</span>
-                    <button onClick={handleHighlight}>Highlight</button>
-                    <div>
-                        <button onClick={prevhandler}>prev</button>
-                        <span>page {currentpage} of {totalpages}</span>
-                        <button onClick={nexthandler}>next</button>
-                    </div>
+        <div className="reader-container">
+            <nav className="reader-nav glass">
+                <div className="nav-left">
+                    <button className="btn-icon" onClick={() => navigate('/')}>← Home</button>
+                    <span className="doc-name">{doc.name}</span>
                 </div>
-                <div className="parentdiv">
-                    <div className="mainpdf" ref={pdfRef}>
+
+                <div className="nav-center">
+                    <button className="btn-pagination" onClick={prevhandler} disabled={currentpage === 1}>Prev</button>
+                    <span className="page-info">Page {currentpage} of {totalpages}</span>
+                    <button className="btn-pagination" onClick={nexthandler} disabled={currentpage === totalpages}>Next</button>
+                </div>
+
+                <div className="nav-right">
+                    <button className="btn-primary highlight-btn" onClick={handleHighlight} disabled={!selectedText}>
+                        Highlight & Connect
+                    </button>
+                </div>
+            </nav>
+
+            <main className="reader-main">
+                <div className="pdf-viewer-container" ref={pdfRef}>
+                    <div className="pdf-document-wrapper">
                         <Document
                             file={`http://localhost:3000/${doc.path.replace(/\\/g, "/")}`}
                             onLoadSuccess={handleLoadSuccess}
@@ -108,30 +131,47 @@ function Reader() {
                                 pageNumber={currentpage}
                                 scale={1.2}
                                 renderTextLayer={true}
+                                className="pdf-page"
                             />
                         </Document>
                     </div>
-                    <div className="aicomponents">
-                        <div className="highlight">
-                            <h1>YOU READ THIS LAST TIME</h1>
-                            {earlierRead.length > 0 &&
-                                earlierRead.map((item, index) => (
-                                    <div key={item.id || index}>
-                                        <p>{item.metadata?.text}</p>
-                                        <p>{item.metadata?.pageNumber}</p>
-                                    </div>
-                                ))}
-                        </div>
-                        <div className="summary">
-                            <h1>SUMMARY IS</h1>
-                            {aiResponse.map((item, index) => (
-                                <p key={index}>{item}</p>
-                            ))}
-                        </div>
-                    </div>
                 </div>
-            </section>
-        </>
+
+                <aside className="ai-sidebar">
+                    <div className="section-content">
+                        {earlierRead.length === 0 ? (
+                            <p className="empty-text">
+                                No related highlights yet — keep reading!
+                            </p>
+                        ) : (
+                            earlierRead.map((text, index) => (
+                                <div className="highlight-card" key={index}>
+                                    <p className="highlight-text">"{text}"</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* <div className="sidebar-section glass">
+                         <div className="section-header">
+                            <h2>Summary</h2>
+                        </div>
+                        <div className="section-content">
+                            {aiResponse.length === 0 ? (
+                                <p className="empty-text">Highlight something to see its summary!</p>
+                            ) : (
+                                aiResponse.map((item, index) => (
+                                    <div className="summary-card" key={index}>
+                                        <p>{item}</p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div> */}
+                </aside>
+            </main>
+        </div>
     )
 }
+
 export default Reader

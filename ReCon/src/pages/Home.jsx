@@ -1,45 +1,146 @@
 import './Home.css'
 import logo from "../assets/ReCon_logo.png";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function Home(){
+function Home() {
 
-    //
     const navigate = useNavigate();
-    const openDocument=(id)=>{
-        navigate(`/reader/${id}`)
+    const [file, setfile] = useState(null)
+    const [user, setUser] = useState(null)        // stores logged in user info
+    const [documents, setDocuments] = useState([]) // stores past uploaded docs
+
+    // Check if user is logged in when home page loads
+    useEffect(() => {
+        fetch("http://localhost:3000/auth/me", {
+            credentials: 'include' // send session cookie with request
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.loggedIn) {
+                    setUser(data) // user is logged in — store their info
+                    fetchDocuments() // fetch their past documents
+                }
+            })
+            .catch(err => console.log(err))
+    }, [])
+
+    // Fetch all documents uploaded by this user
+    const fetchDocuments = () => {
+        fetch("http://localhost:3000/api/documents", {
+            credentials: 'include'
+        })
+            .then(res => res.json())
+            .then(data => setDocuments(data))
+            .catch(err => console.log(err))
     }
 
-    const[file,setfile] = useState(null) //why usestate? it is because upload and chosing file are handled differently with different functions, so the filedata should be stored/remembered  so that they can be accessed in different blocks of different functions
-    
-    function handlechosenfile(e){
-        const chosenfile = e.target.files[0] //got file data from here
+    // Redirect to Google login
+    const handleGoogleLogin = () => {
+        window.location.href = 'http://localhost:3000/auth/google'
+    }
+
+    // Logout
+    const handleLogout = () => {
+        fetch("http://localhost:3000/auth/logout", {
+            credentials: 'include'
+        })
+            .then(() => {
+                setUser(null)
+                setDocuments([])
+            })
+    }
+
+    function handlechosenfile(e) {
+        const chosenfile = e.target.files[0]
         setfile(chosenfile)
     }
 
-    async function handlefileupload(){
+    async function handlefileupload() {
+        if (!file) return
         const formdata = new FormData()
-        formdata.append("file",file)
-        const response = await fetch("http://localhost:3000/api/upload",{  //This is just a naming convention. You prefix all your backend routes with /api so it's clear these are backend endpoints, not frontend pages. It has no technical requirement — you could name it anything — but /api is the industry standard and immediately tells anyone reading your code "this is a backend call."
-            method:"POST",
-            body:formdata
+        formdata.append("file", file)
+        const response = await fetch("http://localhost:3000/api/upload", {
+            method: "POST",
+            body: formdata,
+            credentials: 'include' // send session cookie so backend knows who's uploading
         })
         const data = await response.json()
-        openDocument(data.id)//
+        navigate(`/reader/${data.id}`)
     }
 
-    return(
-        <>
-        <div className="parent_div">
-            <img src={logo} alt="" id='logoimage'/>
-            <h1>Read more. Remember everything.</h1>
-            <p className="home-para">Every time you highlight something important, it lives in the margin of a document you'll never open again. ReCon changes that. Highlight anything — and instantly see everything you've ever read that connects to it. No searching. No note-taking. Just the knowledge you already have, finally talking to itself.</p>
-            <input type="file" accept='.pdf' onChange={handlechosenfile}/>
-            <button onClick={handlefileupload}>upload</button>
-            <div>your last read!</div>
+    // Open a previously uploaded document
+    const openDocument = (id) => {
+        navigate(`/reader/${id}`)
+    }
+
+    return (
+        <div className="home-container">
+            {/* Background decorative elements */}
+            <div className="bg-shape shape-1"></div>
+            <div className="bg-shape shape-2"></div>
+
+            <div className="hero-section glass">
+                <img src={logo} alt="ReCon Logo" className="hero-logo" />
+                <h1 className="hero-title">Read more. <br/><span className="gradient-text">Remember everything.</span></h1>
+                <p className="hero-para">
+                    Every time you highlight something important, it lives in the margin of a document you'll never open again. ReCon changes that. Highlight anything — and instantly see everything you've ever read that connects to it. No searching. No note-taking. Just the knowledge you already have, finally talking to itself.
+                </p>
+
+                {/* Show login button if not logged in */}
+                {!user ? (
+                    <button className="btn-primary login-btn" onClick={handleGoogleLogin}>
+                        Sign in with Google
+                    </button>
+                ) : (
+                    <div className="user-dashboard">
+                        <div className="user-header">
+                            <p className="welcome-text">Welcome back, <strong>{user.name}</strong></p>
+                            <button className="btn-primary logout-btn" onClick={handleLogout}>Logout</button>
+                        </div>
+
+                        {/* Upload new document */}
+                        <div className="upload-section">
+                            <div className="file-input-wrapper">
+                                <input type="file" id="file-upload" accept='.pdf' onChange={handlechosenfile} />
+                                <label htmlFor="file-upload" className="file-label">
+                                    {file ? file.name : "Choose a PDF file..."}
+                                </label>
+                            </div>
+                            <button className="btn-primary upload-btn" onClick={handlefileupload} disabled={!file}>
+                                Upload & Read
+                            </button>
+                        </div>
+
+                        {/* Previously uploaded documents */}
+                        <div className="documents-section">
+                            <h2>Your Documents</h2>
+                            {documents.length === 0 ? (
+                                <div className="empty-state">
+                                    <p>No documents yet — upload your first PDF to get started!</p>
+                                </div>
+                            ) : (
+                                <div className="documents-grid">
+                                    {documents.map(doc => (
+                                        <div
+                                            className="document-card glass"
+                                            key={doc._id}
+                                            onClick={() => openDocument(doc._id)}
+                                        >
+                                            <div className="doc-icon">📄</div>
+                                            <div className="doc-info">
+                                                <h3 className="doc-title">{doc.name}</h3>
+                                                <p className="doc-date">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-        </>
     )
 }
 
