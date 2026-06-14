@@ -1,5 +1,5 @@
 import { HfInference } from "@huggingface/inference";
-const hf = new HfInference("");
+const hf = new HfInference(process.env.HUGGING_FACE_API_KEY);
 
 export async function convertToVector(highlightedText) {
     const embedding = await hf.featureExtraction({

@@ -1,7 +1,6 @@
 import { Pinecone } from '@pinecone-database/pinecone'
-const pc = new Pinecone({ apiKey: "pcsk_5eFGSo_JPvgJ5wTCxko5thHZeZ1RGNLLvAJThxtKLcWt8GRtE6dG2v8rCKPPravaCDt2zT" })
-const namespace = pc.index("recon", "https://recon-v7wjxf6.svc.aped-4627-b74a.pinecone.io").namespace("__default__");
-
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY })
+const namespace = pc.index(process.env.PINECONE_INDEX_NAME, process.env.PINECONE_HOST).namespace("__default__");
 // const generateDummyVector = () => Array.from({ length: 384 }, () => Math.random());
 export async function storeEmbedding(highlightId, vector, metadata) {
   await namespace.upsert({

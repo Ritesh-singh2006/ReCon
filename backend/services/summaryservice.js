@@ -1,7 +1,3 @@
-// terminal commands:
-// 1) npm i --save groq-SharedWorker(not imp)
-// 2)$env:GROQ_API_KEY="your-api-key"
-// 3)give prompt in content in code and simply run the file 
 
 import Groq from "groq-sdk";
 
