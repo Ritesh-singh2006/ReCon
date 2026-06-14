@@ -30,13 +30,13 @@ export const querySimilar = async (vector, currentHighlightId) => {
     vector,
     topK: 10,              // fetch 4 so after removing self we still have 3
     includeMetadata: true,
-    filter: { userId: { $eq: userId } }
   })
 
   // filter out self-match and weak results
   const filtered = result.matches
     .filter(item =>
-      item.id !== currentHighlightId // not the same highlight 
+      item.id !== currentHighlightId,
+      item.metadata.userId === userId // not the same highlight 
     )
 
   return filtered
