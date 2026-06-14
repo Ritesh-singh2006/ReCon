@@ -12,7 +12,7 @@ passport.use(
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
             // This must exactly match what you put in Google Console
-            callbackURL: "http://localhost:3000/auth/google/callback",
+            callbackURL: "https://recon-b4j7.onrender.com/auth/google/callback"
         },
 
         // This function runs after Google confirms the user's identity
