@@ -14,6 +14,7 @@ import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
 import MongoStore from 'connect-mongo';
 
 const app = express()
+app.set('trust proxy', 1)
 const port = 3000
 
 // credentials: true tells browser to include cookies in cross-origin requests
