@@ -193,14 +193,21 @@ app.post('/api/highlight', isLoggedIn, async (req, res) => {
       userId: req.user._id.toString()
     }
     await storeEmbedding(highlight.id, embedding, metadata)
-    const vectorSearchResult = await querySimilar(embedding, highlight._id.toString(),req.user._id.toString());
-    const aiResponse = await getGroqChatCompletion(vectorSearchResult, highlight.selectedText);
-
-    console.log(aiResponse.choices[0].message.content);
-    res.json({
-      message: "highlight saved successfully in DB",
-      relatedHighlights: aiResponse
-    })
+    const vectorSearchResult = await querySimilar(embedding, highlight._id.toString(), req.user._id.toString());
+    if (vectorSearchResult.length === 0) {
+      return res.json({
+        message: "highlight saved successfully in DB",
+        relatedHighlights: null
+      });
+    }
+    else {
+      const aiResponse = await getGroqChatCompletion(vectorSearchResult, highlight.selectedText);
+      console.log(aiResponse.choices[0].message.content);
+      res.json({
+        message: "highlight saved successfully in DB",
+        relatedHighlights: aiResponse
+      })
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
