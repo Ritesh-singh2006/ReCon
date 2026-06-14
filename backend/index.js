@@ -189,10 +189,11 @@ app.post('/api/highlight', isLoggedIn, async (req, res) => {
     const metadata = {
       text: highlight.selectedText,
       documentId: documentId,
-      pageNumber: currentPage
+      pageNumber: currentPage,
+      userId: req.user._id.toString()
     }
     await storeEmbedding(highlight.id, embedding, metadata)
-    const vectorSearchResult = await querySimilar(embedding, highlight._id.toString());
+    const vectorSearchResult = await querySimilar(embedding, highlight._id.toString(),req.user._id.toString());
     const aiResponse = await getGroqChatCompletion(vectorSearchResult, highlight.selectedText);
 
     console.log(aiResponse.choices[0].message.content);

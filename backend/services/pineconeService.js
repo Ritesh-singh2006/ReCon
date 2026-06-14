@@ -29,7 +29,8 @@ export const querySimilar = async (vector, currentHighlightId) => {
   const result = await namespace.query({
     vector,
     topK: 10,              // fetch 4 so after removing self we still have 3
-    includeMetadata: true
+    includeMetadata: true,
+    filter: { userId: { $eq: userId } }
   })
 
   // filter out self-match and weak results
