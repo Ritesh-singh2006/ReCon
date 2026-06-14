@@ -18,7 +18,7 @@ const port = 3000
 // credentials: true tells browser to include cookies in cross-origin requests
 // without this, session cookie won't be sent from localhost:5173 to localhost:3000
 app.use(cors({
-  origin: "http://localhost:5173", // only allow your React app
+  origin: "https://re-con-orcin.vercel.app", // only allow your React app
   credentials: true               // allow cookies to be sent
 }))
 
@@ -78,11 +78,11 @@ app.get('/auth/google',
 // Passport handles the code exchange, runs verify callback, serializes user
 app.get('/auth/google/callback',
   passport.authenticate('google', {
-    failureRedirect: 'http://localhost:5173' // login failed — back to home
+    failureRedirect: "https://re-con-orcin.vercel.app" // login failed — back to home
   }),
   (req, res) => {
     // login succeeded — redirect to React app
-    res.redirect('http://localhost:5173')
+    res.redirect("https://re-con-orcin.vercel.app")
   }
 )
 
