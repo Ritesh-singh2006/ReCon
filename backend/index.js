@@ -39,7 +39,7 @@ app.use(session({
   saveUninitialized: false,           // don't create session until something stored
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,     // session lasts 24 hours (in milliseconds)
-    secure:true,
+    secure: true,
     sameSite: 'none',
   }
 }))
@@ -68,10 +68,11 @@ mongoose.connect(process.env.MONGO_URI)
 function isLoggedIn(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ message: "please login first" });
-  
+
   const token = authHeader.split(' ')[1];
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { _id: decoded.id, name: decoded.name, email: decoded.email };
     next();
   } catch {
     res.status(401).json({ message: "invalid token" });
@@ -108,7 +109,7 @@ app.get('/auth/google/callback',
 app.get('/auth/me', (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.json({ loggedIn: false });
-  
+
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -190,7 +191,7 @@ app.post('/api/highlight', isLoggedIn, async (req, res) => {
       documentId: documentId,
       pageNumber: currentPage
     }
-    await storeEmbedding(highlight.id, embedding, metadata)    
+    await storeEmbedding(highlight.id, embedding, metadata)
     const vectorSearchResult = await querySimilar(embedding, highlight._id.toString());
     const aiResponse = await getGroqChatCompletion(vectorSearchResult, highlight.selectedText);
 
