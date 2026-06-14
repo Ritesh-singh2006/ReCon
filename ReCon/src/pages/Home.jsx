@@ -12,7 +12,7 @@ function Home() {
 
     // Check if user is logged in when home page loads
     useEffect(() => {
-        fetch("http://localhost:3000/auth/me", {
+        fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
             credentials: 'include' // send session cookie with request
         })
             .then(res => res.json())
@@ -27,7 +27,7 @@ function Home() {
 
     // Fetch all documents uploaded by this user
     const fetchDocuments = () => {
-        fetch("http://localhost:3000/api/documents", {
+        fetch(`${import.meta.env.VITE_API_URL}/api/documents`, {
             credentials: 'include'
         })
             .then(res => res.json())
@@ -37,12 +37,12 @@ function Home() {
 
     // Redirect to Google login
     const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:3000/auth/google'
+        window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
     }
 
     // Logout
     const handleLogout = () => {
-        fetch("http://localhost:3000/auth/logout", {
+        fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
             credentials: 'include'
         })
             .then(() => {
@@ -60,7 +60,7 @@ function Home() {
         if (!file) return
         const formdata = new FormData()
         formdata.append("file", file)
-        const response = await fetch("http://localhost:3000/api/upload", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
             method: "POST",
             body: formdata,
             credentials: 'include' // send session cookie so backend knows who's uploading

@@ -6,6 +6,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import './Reader.css';
 import toast from "react-hot-toast";
+import.meta.env.VITE_API_URL
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
 
@@ -24,7 +25,7 @@ function Reader() {
 
     // Check auth on load — redirect to home if not logged in
     useEffect(() => {
-        fetch("http://localhost:3000/auth/me", {
+        fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
             credentials: 'include'
         })
             .then(res => res.json())
@@ -38,7 +39,7 @@ function Reader() {
 
     // Fetch document info
     useEffect(() => {
-        fetch(`http://localhost:3000/api/uploads/${documentId}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/uploads/${documentId}`, {
             credentials: 'include' // send session cookie
         })
             .then(res => res.json())
@@ -68,7 +69,7 @@ function Reader() {
     const handleHighlight = () => {
         if (!selectedText) return;
 
-        fetch('http://localhost:3000/api/highlight', {
+        fetch(`${import.meta.env.VITE_API_URL}/api/highlight`, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include', // send session cookie
@@ -124,7 +125,7 @@ function Reader() {
                 <div className="pdf-viewer-container" ref={pdfRef}>
                     <div className="pdf-document-wrapper">
                         <Document
-                            file={`http://localhost:3000/${doc.path.replace(/\\/g, "/")}`}
+                            file={`${import.meta.env.VITE_API_URL}/${doc.path.replace(/\\/g, "/")}`}
                             onLoadSuccess={handleLoadSuccess}
                         >
                             <Page
