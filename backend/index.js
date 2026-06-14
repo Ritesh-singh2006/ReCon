@@ -11,6 +11,7 @@ import { UserModel } from './models/User.js';
 import { getGroqChatCompletion } from "./services/summaryservice.js";
 import { convertToVector } from "./services/embeddingService.js"
 import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
+import MongoStore from 'connect-mongo';
 
 const app = express()
 const port = 3000
@@ -31,10 +32,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET, // from your .env file — signs the cookie
   resave: false,                      // don't save session if nothing changed
   saveUninitialized: false,           // don't create session until something stored
+  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,     // session lasts 24 hours (in milliseconds)
     secure:true,
-    sameSite: 'none'  
+    sameSite: 'none',
   }
 }))
 
