@@ -32,7 +32,9 @@ app.use(session({
   resave: false,                      // don't save session if nothing changed
   saveUninitialized: false,           // don't create session until something stored
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000    // session lasts 24 hours (in milliseconds)
+    maxAge: 24 * 60 * 60 * 1000,     // session lasts 24 hours (in milliseconds)
+    secure:true,
+    sameSite: 'none'  
   }
 }))
 
