@@ -194,6 +194,8 @@ app.post('/api/highlight', isLoggedIn, async (req, res) => {
     }
     await storeEmbedding(highlight.id, embedding, metadata)
     const vectorSearchResult = await querySimilar(embedding, highlight._id.toString(), req.user._id.toString());
+    console.log(vectorSearchResult)
+    console.log(req.user._id.toString())
     if (vectorSearchResult.length === 0) {
       return res.json({
         message: "highlight saved successfully in DB",
