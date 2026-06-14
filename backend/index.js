@@ -12,9 +12,14 @@ import { getGroqChatCompletion } from "./services/summaryservice.js";
 import { convertToVector } from "./services/embeddingService.js"
 import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
 
 const app = express()
 const port = 3000
+
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // credentials: true tells browser to include cookies in cross-origin requests
 // without this, session cookie won't be sent from localhost:5173 to localhost:3000
