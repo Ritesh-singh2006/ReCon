@@ -23,10 +23,13 @@ function Reader() {
     const [aiResponse, setaiResponse] = useState([]);
     const [earlierRead, setearlierRead] = useState([]);
 
+    const getToken = () => localStorage.getItem('token');
+    const authHeaders = () => ({ 'Authorization': `Bearer ${getToken()}` });
+
     // Check auth on load — redirect to home if not logged in
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-            credentials: 'include'
+            headers: authHeaders()
         })
             .then(res => res.json())
             .then(data => {
@@ -40,7 +43,7 @@ function Reader() {
     // Fetch document info
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/uploads/${documentId}`, {
-            credentials: 'include' // send session cookie
+            headers: authHeaders()
         })
             .then(res => res.json())
             .then(data => setdoc(data))
@@ -71,8 +74,10 @@ function Reader() {
 
         fetch(`${import.meta.env.VITE_API_URL}/api/highlight`, {
             method: "POST",
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // send session cookie
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
             body: JSON.stringify({
                 selectedText,
                 documentId,

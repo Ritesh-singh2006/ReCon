@@ -11,10 +11,9 @@ import { UserModel } from './models/User.js';
 import { getGroqChatCompletion } from "./services/summaryservice.js";
 import { convertToVector } from "./services/embeddingService.js"
 import { storeEmbedding, querySimilar } from "./services/pineconeService.js";
-import MongoStore from 'connect-mongo';
+import jwt from 'jsonwebtoken';
 
 const app = express()
-app.set('trust proxy', 1)
 const port = 3000
 
 // credentials: true tells browser to include cookies in cross-origin requests
@@ -33,7 +32,6 @@ app.use(session({
   secret: process.env.SESSION_SECRET, // from your .env file — signs the cookie
   resave: false,                      // don't save session if nothing changed
   saveUninitialized: false,           // don't create session until something stored
-  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,     // session lasts 24 hours (in milliseconds)
     secure:true,
@@ -63,10 +61,15 @@ mongoose.connect(process.env.MONGO_URI)
 // Reusable function to protect routes
 // Add this to any route that requires login
 function isLoggedIn(req, res, next) {
-  if (req.user) {
-    next() // user is logged in — continue to route handler
-  } else {
-    res.status(401).json({ message: "please login first" })
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: "please login first" });
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ message: "invalid token" });
   }
 }
 
@@ -83,26 +86,30 @@ app.get('/auth/google',
 // Passport handles the code exchange, runs verify callback, serializes user
 app.get('/auth/google/callback',
   passport.authenticate('google', {
-    failureRedirect: "https://re-con-orcin.vercel.app" // login failed — back to home
+    failureRedirect: "https://re-con-orcin.vercel.app"
   }),
   (req, res) => {
-    // login succeeded — redirect to React app
-    res.redirect("https://re-con-orcin.vercel.app")
+    const token = jwt.sign(
+      { id: req.user._id, name: req.user.name, email: req.user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    )
+    res.redirect(`https://re-con-orcin.vercel.app?token=${token}`)
   }
 )
 
 // Route for frontend to check if user is logged in
 // Frontend calls this on load to know whether to show login button or home screen
 app.get('/auth/me', (req, res) => {
-  if (req.user) {
-    res.json({
-      loggedIn: true,
-      name: req.user.name,
-      email: req.user.email,
-      id: req.user._id
-    })
-  } else {
-    res.json({ loggedIn: false })
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.json({ loggedIn: false });
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ loggedIn: true, name: decoded.name, email: decoded.email, id: decoded.id });
+  } catch {
+    res.json({ loggedIn: false });
   }
 })
 
