@@ -35,7 +35,7 @@ export const querySimilar = async (vector, currentHighlightId) => {
   // filter out self-match and weak results
   const filtered = result.matches
     .filter(item =>
-      item.id !== currentHighlightId,
+      item.id !== currentHighlightId &&
       item.metadata.userId === userId // not the same highlight 
     )
 
