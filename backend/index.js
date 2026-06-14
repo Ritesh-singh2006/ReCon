@@ -44,7 +44,7 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 //connecting database
-mongoose.connect("mongodb://localhost:27017/ReCon_DB")
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("DB connected successfully")
   })
