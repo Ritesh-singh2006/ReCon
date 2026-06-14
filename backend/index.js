@@ -182,24 +182,18 @@ app.post('/api/highlight', isLoggedIn, async (req, res) => {
       currentPage,
       userId: req.user._id
     });
-    console.log(highlight);
     await highlight.save();
     // const chatCompletion = await getGroqChatCompletion(highlight.selectedText)
     // const aiResponse = chatCompletion.choices[0]?.message?.content || "";
     const embedding = await convertToVector(highlight.selectedText);
-    console.log(embedding)
     const metadata = {
       text: highlight.selectedText,
       documentId: documentId,
       pageNumber: currentPage,
       userId: req.user._id.toString()
     }
-    console.log(metadata)
     await storeEmbedding(highlight.id, embedding, metadata)
     const vectorSearchResult = await querySimilar(embedding, highlight._id.toString(), req.user._id.toString());
-    console.log(vectorSearchResult)
-    console.log(hiiiii)
-    console.log(req.user._id.toString())
     if (vectorSearchResult.length === 0) {
       return res.json({
         message: "highlight saved successfully in DB",
@@ -208,7 +202,7 @@ app.post('/api/highlight', isLoggedIn, async (req, res) => {
     }
     else {
       const aiResponse = await getGroqChatCompletion(vectorSearchResult, highlight.selectedText);
-      console.log(aiResponse);
+      console.log(aiResponse)
       res.json({
         message: "highlight saved successfully in DB",
         relatedHighlights: aiResponse
