@@ -24,7 +24,7 @@ export async function storeEmbedding(highlightId, vector, metadata) {
 //   return queryResponse;
 // }
 
-export const querySimilar = async (vector, currentHighlightId) => {
+export const querySimilar = async (vector, currentHighlightId,userId) => {
 
   const result = await namespace.query({
     vector,
